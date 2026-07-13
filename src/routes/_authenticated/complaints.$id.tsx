@@ -54,7 +54,7 @@ function ComplaintDetail() {
   });
 
   async function changeStatus(status: string) {
-    const { error } = await supabase.from("complaints").update({ status }).eq("id", id);
+    const { error } = await supabase.from("complaints").update({ status: status as (typeof STATUSES)[number] }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success(`Status set to ${STATUS_LABEL[status]}`);
     queryClient.invalidateQueries({ queryKey: ["complaint", id] });

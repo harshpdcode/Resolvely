@@ -263,8 +263,7 @@ export const getMyComplaints = createServerFn({ method: "GET" })
         resolvedAt: c.resolved_at ?? null,
       }));
       if (context.role === "admin") return allComplaints;
-      const userComplaints = allComplaints.filter((c) => c.userId === context.userId);
-      return userComplaints.length > 0 ? userComplaints : allComplaints;
+      return allComplaints.filter((c) => c.userId === context.userId);
     }
 
     const { prisma } = await import("@/integrations/db/client.server");
@@ -288,6 +287,7 @@ export const getComplaintById = createServerFn({ method: "GET" })
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
       const { data: c } = await mockSupabase.from("complaints").select("*").eq("id", data.id).maybeSingle();
       if (!c) return null;
+      if (context.role !== "admin" && c.user_id !== context.userId) return null;
       return {
         id: c.id,
         userId: c.user_id,

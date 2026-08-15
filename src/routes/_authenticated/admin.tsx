@@ -1,12 +1,13 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { getAdminStats, getMyComplaints, generateAiExecutiveBriefing } from "@/lib/complaints.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   BarChart,
   Bar,
@@ -44,6 +45,12 @@ import {
   Bot,
   Loader2,
   RefreshCw,
+  Search,
+  Download,
+  Filter,
+  User,
+  Star,
+  Activity,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -71,6 +78,8 @@ function AdminPage() {
 
   const [aiBriefing, setAiBriefing] = useState<string | null>(null);
   const [generatingBriefing, setGeneratingBriefing] = useState(false);
+  const [tableSearch, setTableSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const { data: analytics, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-stats"],
@@ -105,6 +114,47 @@ function AdminPage() {
     }
   }
 
+  const filteredMasterList = useMemo(() => {
+    if (!all) return [];
+    return all.filter((c) => {
+      const q = tableSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        c.title.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        (c.userName && c.userName.toLowerCase().includes(q)) ||
+        (c.userEmail && c.userEmail.toLowerCase().includes(q));
+
+      const matchesCat = categoryFilter === "all" || c.category === categoryFilter;
+      return matchesSearch && matchesCat;
+    });
+  }, [all, tableSearch, categoryFilter]);
+
+  function exportToCsv() {
+    if (!all || all.length === 0) return toast.error("No complaints to export");
+    const headers = ["ID", "Title", "Category", "Priority", "Status", "Customer Email", "Customer Name", "Created At", "Resolved At"];
+    const rows = all.map((c) => [
+      c.id,
+      `"${c.title.replace(/"/g, '""')}"`,
+      c.category,
+      c.priority,
+      c.status,
+      c.userEmail || "",
+      `"${(c.userName || "").replace(/"/g, '""')}"`,
+      c.createdAt,
+      c.resolvedAt || "",
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `resolvely_complaints_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV Export downloaded!");
+  }
+
   const categoryData = analytics
     ? Object.entries(analytics.byCategory).map(([k, v]) => ({
         name: CATEGORY_LABEL[k] ?? k,
@@ -125,32 +175,39 @@ function AdminPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-            <ShieldAlert className="h-4 w-4" /> System Administration & Oversight
+            <ShieldAlert className="h-4 w-4" /> System Administration & Executive Oversight
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">
             Admin Analytics Dashboard
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time intelligence on customer issues, team resolution speed, and SLA compliance.
+            Master control room: real-time intake volume, AI classification accuracy, and team SLA compliance.
           </p>
         </div>
 
-        {/* Feature 4: Generate AI Executive Briefing Button */}
-        <Button
-          onClick={handleGenerateBriefing}
-          disabled={generatingBriefing || statsLoading}
-          className="font-bold shadow-sm hover:shadow-glow-sm transition-all h-10 px-5 text-xs"
-        >
-          {generatingBriefing ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Analyzing Metrics…
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5" /> ✨ Generate AI Executive Briefing
-            </span>
-          )}
-        </Button>
+        <div className="flex items-center gap-2.5">
+          {/* Export to CSV */}
+          <Button variant="outline" size="sm" onClick={exportToCsv} className="text-xs font-semibold h-10 px-4">
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+          </Button>
+
+          {/* Feature 4: Generate AI Executive Briefing Button */}
+          <Button
+            onClick={handleGenerateBriefing}
+            disabled={generatingBriefing || statsLoading}
+            className="font-bold shadow-sm hover:shadow-glow-sm transition-all h-10 px-5 text-xs"
+          >
+            {generatingBriefing ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Analyzing Metrics…
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5" /> ✨ Generate AI Briefing
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Feature 4: AI Executive Briefing Card */}
@@ -159,7 +216,7 @@ function AdminPage() {
           <CardHeader className="pb-3 border-b border-primary/20 bg-primary/10">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
-                <Bot className="h-4 w-4" /> Google Gemini Executive Briefing
+                <Bot className="h-4 w-4" /> Google Gemini 2.5 Flash Executive Briefing
               </CardTitle>
               <Badge variant="outline" className="bg-primary/20 text-primary border-primary/40 text-[10px] uppercase font-bold">
                 Live AI Assessment
@@ -176,7 +233,7 @@ function AdminPage() {
 
       {/* SLA Breach Alert Banner */}
       {analytics && analytics.slaBreachCount > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 sm:p-5 text-destructive shadow-sm">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 sm:p-5 text-destructive shadow-sm animate-pulse-glow">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-destructive/15 flex items-center justify-center shrink-0">
               <AlertTriangle className="h-5 w-5" />
@@ -208,7 +265,7 @@ function AdminPage() {
             bg: "bg-primary/10",
           },
         ].map((s) => (
-          <Card key={s.label} className="border-border/70 card-hover-effect">
+          <Card key={s.label} className="border-border/70 card-hover-effect bg-card/90">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {s.label}
@@ -227,12 +284,12 @@ function AdminPage() {
       {/* Visual Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* 14-Day Trend Line Chart */}
-        <Card className="lg:col-span-2 border-border/70 shadow-sm">
+        <Card className="lg:col-span-2 border-border/70 shadow-sm bg-card/90">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <LineIcon className="h-4 w-4 text-primary" /> 14-Day Complaint Volume Trend
             </CardTitle>
-            <CardDescription className="text-xs">Daily intake frequency over past two weeks</CardDescription>
+            <CardDescription className="text-xs">Daily intake frequency across all customer categories</CardDescription>
           </CardHeader>
           <CardContent className="h-64 sm:h-72 pt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -261,12 +318,12 @@ function AdminPage() {
         </Card>
 
         {/* Priority Mix Pie Chart */}
-        <Card className="border-border/70 shadow-sm">
+        <Card className="border-border/70 shadow-sm bg-card/90">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <PieIcon className="h-4 w-4 text-primary" /> Priority Distribution
+              <PieIcon className="h-4 w-4 text-primary" /> Priority Severity Mix
             </CardTitle>
-            <CardDescription className="text-xs">Ticket severity breakdown</CardDescription>
+            <CardDescription className="text-xs">Distribution of Low vs Urgent tickets</CardDescription>
           </CardHeader>
           <CardContent className="h-64 sm:h-72 flex items-center justify-center pt-2">
             <ResponsiveContainer width="100%" height="100%">
@@ -298,12 +355,12 @@ function AdminPage() {
         </Card>
 
         {/* Category Breakdown Bar Chart */}
-        <Card className="lg:col-span-3 border-border/70 shadow-sm">
+        <Card className="lg:col-span-3 border-border/70 shadow-sm bg-card/90">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" /> Category Distribution
+              <BarChart3 className="h-4 w-4 text-primary" /> Category Distribution by Department
             </CardTitle>
-            <CardDescription className="text-xs">Issue breakdown by department & service area</CardDescription>
+            <CardDescription className="text-xs">Volume breakdown across billing, technical, service, and product</CardDescription>
           </CardHeader>
           <CardContent className="h-64 sm:h-72 pt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -326,48 +383,83 @@ function AdminPage() {
         </Card>
       </div>
 
-      {/* Master Complaints Table */}
-      <Card className="border-border/70 shadow-sm overflow-hidden">
+      {/* Master Complaints Table with Search & Category Filters */}
+      <Card className="border-border/70 shadow-sm overflow-hidden bg-card/90 backdrop-blur-md">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base font-bold">All System Complaints</CardTitle>
-              <CardDescription className="text-xs">Master list of customer tickets across all departments</CardDescription>
+              <CardTitle className="text-base font-bold">All System Complaints ({filteredMasterList.length})</CardTitle>
+              <CardDescription className="text-xs">Master queue of all customer tickets across all accounts</CardDescription>
             </div>
-            <span className="text-xs font-semibold text-muted-foreground">
-              {all?.length ?? 0} total
-            </span>
+
+            {/* Table Search & Department Filter */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  placeholder="Filter by customer, title…"
+                  className="pl-8 h-8 text-xs bg-background w-48 sm:w-60"
+                />
+              </div>
+
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground focus:outline-none"
+              >
+                <option value="all">All Departments</option>
+                <option value="billing">Billing</option>
+                <option value="technical">Technical</option>
+                <option value="service">Service</option>
+                <option value="product">Product</option>
+                <option value="delivery">Delivery</option>
+                <option value="account">Account</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {!all || all.length === 0 ? (
+          {filteredMasterList.length === 0 ? (
             <div className="p-10 text-center text-sm text-muted-foreground">
-              No complaints in system.
+              No matching complaints in system.
             </div>
           ) : (
             <div className="divide-y divide-border/60">
-              {all.map((c) => (
+              {filteredMasterList.map((c) => (
                 <Link
                   key={c.id}
                   to="/complaints/$id"
                   params={{ id: c.id }}
                   className="group flex flex-col gap-2 p-4 sm:p-5 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
                         {c.title}
                       </span>
                       {c.aiClassified && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                          <Sparkles className="h-2.5 w-2.5" /> AI
+                          <Sparkles className="h-2.5 w-2.5" /> Gemini 2.5 Flash
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
-                      <span>Submitted by: <b>{c.userName || c.userEmail || "Customer"}</b></span>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="font-semibold text-foreground/90 flex items-center gap-1">
+                        <User className="h-3 w-3 text-primary" /> {c.userName || "Customer"} ({c.userEmail || "customer@example.com"})
+                      </span>
                       <span>•</span>
-                      <span>{formatDate(c.createdAt)}</span>
+                      <span>Submitted on {formatDate(c.createdAt)}</span>
+                      {c.csatRating && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-500 font-bold flex items-center gap-0.5">
+                            <Star className="h-3 w-3 fill-amber-400" /> CSAT: {c.csatRating}/5
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 

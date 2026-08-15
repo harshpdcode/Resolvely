@@ -1,4 +1,5 @@
-// Offline/Local Storage Mock Client for Supabase with Smooth Error Handling & Pre-seeded Data
+// Offline/Local Storage Mock Client for Supabase with 1 Admin and 3 Customers
+// Fresh empty complaints database for clean manual testing
 
 type Role = 'admin' | 'user';
 
@@ -14,6 +15,8 @@ export interface UserRecord {
 export interface ComplaintRecord {
   id: string;
   user_id: string;
+  user_email?: string;
+  user_name?: string;
   title: string;
   description: string;
   category: string;
@@ -21,6 +24,8 @@ export interface ComplaintRecord {
   status: string;
   ai_reason: string | null;
   ai_classified: boolean;
+  csat_rating?: number | null;
+  csat_feedback?: string | null;
   created_at: string;
   updated_at: string;
   resolved_at?: string | null;
@@ -30,96 +35,57 @@ export interface ComplaintUpdateRecord {
   id: string;
   complaint_id: string;
   author_id?: string;
+  author_name?: string;
   note?: string;
   from_status?: string;
   to_status?: string;
   created_at: string;
 }
 
-// Initial Seed Users
+// 1 Admin & 3 Dedicated Customer Accounts
 const DEFAULT_USERS: UserRecord[] = [
   {
     id: 'user-admin-1',
     email: 'admin@example.com',
     password: 'Password123!',
-    full_name: 'Admin User',
+    full_name: 'System Admin',
     role: 'admin',
     created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
   },
   {
-    id: 'user-standard-2',
-    email: 'user2@example.com',
+    id: 'user-customer-1',
+    email: 'customer1@example.com',
     password: 'Password123!',
-    full_name: 'Test User 2',
+    full_name: 'Alex Johnson',
+    role: 'user',
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: 'user-customer-2',
+    email: 'customer2@example.com',
+    password: 'Password123!',
+    full_name: 'Sarah Miller',
     role: 'user',
     created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
   },
-];
-
-// Initial Seed Complaints
-const DEFAULT_COMPLAINTS: ComplaintRecord[] = [
   {
-    id: 'c-101',
-    user_id: 'user-standard-2',
-    title: 'Incorrect Billing Charge on Invoice #4092',
-    description: 'I was double charged $49.99 for the monthly subscription on August 10th. Please refund the duplicate transaction.',
-    category: 'billing',
-    priority: 'high',
-    status: 'open',
-    ai_reason: 'Categorized as billing due to invoice inquiry. Priority high due to financial dispute.',
-    ai_classified: true,
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: 'c-102',
-    user_id: 'user-standard-2',
-    title: 'Dashboard Page Slow Load Time',
-    description: 'The analytics dashboard takes more than 8 seconds to render graphs on Chrome v126.',
-    category: 'technical',
-    priority: 'medium',
-    status: 'in_progress',
-    ai_reason: 'Technical issue regarding UI render performance.',
-    ai_classified: true,
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: 'c-103',
-    user_id: 'user-admin-1',
-    title: 'Password Reset Email Delay',
-    description: 'Verification emails are arriving after 15 minutes instead of instantly.',
-    category: 'service',
-    priority: 'low',
-    status: 'resolved',
-    ai_reason: 'Service latency inquiry.',
-    ai_classified: true,
-    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-    resolved_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-  },
-];
-
-const DEFAULT_UPDATES: ComplaintUpdateRecord[] = [
-  {
-    id: 'cu-201',
-    complaint_id: 'c-103',
-    author_id: 'user-admin-1',
-    note: 'Resolved by updating SMTP worker pool.',
-    from_status: 'in_progress',
-    to_status: 'resolved',
-    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-  },
-  {
-    id: 'cu-202',
-    complaint_id: 'c-102',
-    author_id: 'user-admin-1',
-    note: 'Investigating query caching.',
-    from_status: 'open',
-    to_status: 'in_progress',
+    id: 'user-customer-3',
+    email: 'customer3@example.com',
+    password: 'Password123!',
+    full_name: 'David Chen',
+    role: 'user',
     created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
   },
 ];
+
+// Clean empty database for manual testing
+const DEFAULT_COMPLAINTS: ComplaintRecord[] = [];
+const DEFAULT_UPDATES: ComplaintUpdateRecord[] = [];
+
+// In-memory runtime store for server-side SSR / API execution
+let memoryUsers = [...DEFAULT_USERS];
+let memoryComplaints: ComplaintRecord[] = [];
+let memoryUpdates: ComplaintUpdateRecord[] = [];
 
 function getItem<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue;
@@ -145,35 +111,41 @@ function setItem<T>(key: string, value: T) {
 }
 
 function getUsers(): UserRecord[] {
-  return getItem<UserRecord[]>('mock_users', DEFAULT_USERS);
+  if (typeof window === 'undefined') return memoryUsers;
+  return getItem<UserRecord[]>('mock_users_v3', DEFAULT_USERS);
 }
 
 function saveUsers(users: UserRecord[]) {
-  setItem('mock_users', users);
+  memoryUsers = users;
+  setItem('mock_users_v3', users);
 }
 
 function getComplaints(): ComplaintRecord[] {
-  return getItem<ComplaintRecord[]>('mock_complaints', DEFAULT_COMPLAINTS);
+  if (typeof window === 'undefined') return memoryComplaints;
+  return getItem<ComplaintRecord[]>('mock_complaints_v3', DEFAULT_COMPLAINTS);
 }
 
 function saveComplaints(complaints: ComplaintRecord[]) {
-  setItem('mock_complaints', complaints);
+  memoryComplaints = complaints;
+  setItem('mock_complaints_v3', complaints);
 }
 
 function getUpdates(): ComplaintUpdateRecord[] {
-  return getItem<ComplaintUpdateRecord[]>('mock_updates', DEFAULT_UPDATES);
+  if (typeof window === 'undefined') return memoryUpdates;
+  return getItem<ComplaintUpdateRecord[]>('mock_updates_v3', DEFAULT_UPDATES);
 }
 
 function saveUpdates(updates: ComplaintUpdateRecord[]) {
-  setItem('mock_updates', updates);
+  memoryUpdates = updates;
+  setItem('mock_updates_v3', updates);
 }
 
 function getSession() {
-  return getItem<any>('mock_session', null);
+  return getItem<any>('mock_session_v3', null);
 }
 
 function saveSession(session: any) {
-  setItem('mock_session', session);
+  setItem('mock_session_v3', session);
 }
 
 const listeners: Set<Function> = new Set();
@@ -189,8 +161,7 @@ export const mockSupabase = {
         const users = getUsers();
         let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
         const fullName = options?.data?.full_name || email.split('@')[0];
-        const isFirstUser = users.length === 0;
-        const role: Role = isFirstUser ? 'admin' : 'user';
+        const role: Role = email.toLowerCase().trim() === 'admin@example.com' ? 'admin' : 'user';
 
         if (!user) {
           user = {
@@ -420,6 +391,8 @@ export const mockSupabase = {
             const newRecord: ComplaintRecord = {
               id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'c-' + Date.now(),
               user_id: record.user_id,
+              user_email: record.user_email,
+              user_name: record.user_name,
               title: record.title,
               description: record.description,
               category: record.category || 'other',
@@ -427,6 +400,8 @@ export const mockSupabase = {
               status: record.status || 'open',
               ai_reason: record.ai_reason || null,
               ai_classified: record.ai_classified ?? false,
+              csat_rating: null,
+              csat_feedback: null,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
@@ -448,6 +423,7 @@ export const mockSupabase = {
               id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'cu-' + Date.now(),
               complaint_id: record.complaint_id,
               author_id: record.author_id,
+              author_name: record.author_name,
               note: record.note,
               from_status: record.from_status,
               to_status: record.to_status,

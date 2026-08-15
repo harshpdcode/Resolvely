@@ -105,6 +105,11 @@ function AuthPage() {
       saveToken(result.token);
       toast.success("Welcome back to Resolvely!");
       navigate({ to: "/dashboard", replace: true });
+      setTimeout(() => {
+        if (typeof window !== "undefined" && window.location.pathname.startsWith("/auth")) {
+          window.location.href = "/dashboard";
+        }
+      }, 50);
     } catch (err) {
       toast.error(formatAuthError(err));
     } finally {
@@ -128,6 +133,11 @@ function AuthPage() {
           : "Account created successfully!"
       );
       navigate({ to: "/dashboard", replace: true });
+      setTimeout(() => {
+        if (typeof window !== "undefined" && window.location.pathname.startsWith("/auth")) {
+          window.location.href = "/dashboard";
+        }
+      }, 50);
     } catch (err) {
       toast.error(formatAuthError(err));
     } finally {

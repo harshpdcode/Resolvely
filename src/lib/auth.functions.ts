@@ -22,13 +22,16 @@ export const register = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ token: string; role: "admin" | "user"; userId: string }> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
+      const { signToken } = await import("@/integrations/auth/jwt.server");
       const result = await mockSupabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: { data: { full_name: data.fullName } },
       });
       if (result.error) throw new Error(result.error.message);
-      return { token: `mock-jwt-token-${result.data.user!.id}`, role: "admin", userId: result.data.user!.id };
+      const userId = result.data.user!.id;
+      const token = await signToken({ userId, role: "admin" });
+      return { token, role: "admin", userId };
     }
 
     const request = getRequest();
@@ -81,6 +84,7 @@ export const login = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ token: string; role: "admin" | "user"; userId: string; fullName: string | null }> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
+      const { signToken } = await import("@/integrations/auth/jwt.server");
       const result = await mockSupabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
@@ -89,7 +93,8 @@ export const login = createServerFn({ method: "POST" })
       const userId = result.data.user!.id;
       const roleResult = await mockSupabase.rpc("has_role", { _user_id: userId, _role: "admin" });
       const role = roleResult.data ? "admin" : "user";
-      return { token: `mock-jwt-token-${userId}`, role, userId, fullName: result.data.user?.user_metadata?.full_name ?? null };
+      const token = await signToken({ userId, role });
+      return { token, role, userId, fullName: result.data.user?.user_metadata?.full_name ?? null };
     }
 
     const request = getRequest();

@@ -30,8 +30,10 @@ export const register = createServerFn({ method: "POST" })
       });
       if (result.error) throw new Error(result.error.message);
       const userId = result.data.user!.id;
-      const token = await signToken({ userId, role: "admin" });
-      return { token, role: "admin", userId };
+      // Only admin@example.com is admin. All other registered users are standard users.
+      const role: "admin" | "user" = data.email.toLowerCase().trim() === "admin@example.com" ? "admin" : "user";
+      const token = await signToken({ userId, role });
+      return { token, role, userId };
     }
 
     const request = getRequest();
@@ -91,8 +93,8 @@ export const login = createServerFn({ method: "POST" })
       });
       if (result.error) throw new Error(result.error.message);
       const userId = result.data.user!.id;
-      const roleResult = await mockSupabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-      const role = roleResult.data ? "admin" : "user";
+      // Only admin@example.com is admin. All other users are standard users.
+      const role: "admin" | "user" = data.email.toLowerCase().trim() === "admin@example.com" ? "admin" : "user";
       const token = await signToken({ userId, role });
       return { token, role, userId, fullName: result.data.user?.user_metadata?.full_name ?? null };
     }
@@ -137,7 +139,12 @@ export const getProfile = createServerFn({ method: "GET" })
     if (context.isMock) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
       const { data } = await mockSupabase.auth.getUser();
-      return { email: data.user?.email ?? "mock@example.com", fullName: "Mock Admin", role: "admin" };
+      const role = context.role;
+      return {
+        email: data.user?.email ?? (role === "admin" ? "admin@example.com" : "user@example.com"),
+        fullName: data.user?.user_metadata?.full_name ?? (role === "admin" ? "System Admin" : "User Account"),
+        role,
+      };
     }
 
     const { prisma } = await import("@/integrations/db/client.server");

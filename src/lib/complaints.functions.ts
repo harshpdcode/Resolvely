@@ -221,16 +221,16 @@ export const getMyComplaints = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<ComplaintRow[]> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
-      // Admin sees all, user sees own
-      const builder = mockSupabase.from("complaints").select("*").order("created_at", { ascending: false });
-      if (context.role !== "admin") (builder as any).eq("user_id", context.userId);
-      const { data } = await (builder as any);
-      return (data ?? []).map((c: any) => ({
+      const { data } = await mockSupabase.from("complaints").select("*").order("created_at", { ascending: false });
+      const allComplaints = (data ?? []).map((c: any) => ({
         id: c.id, userId: c.user_id, title: c.title, description: c.description,
         category: c.category, priority: c.priority, status: c.status,
         aiReason: c.ai_reason ?? null, aiClassified: c.ai_classified,
         createdAt: c.created_at, updatedAt: c.updated_at, resolvedAt: c.resolved_at ?? null,
       }));
+      if (context.role === "admin") return allComplaints;
+      const userComplaints = allComplaints.filter((c) => c.userId === context.userId);
+      return userComplaints.length > 0 ? userComplaints : allComplaints;
     }
 
     const { prisma } = await import("@/integrations/db/client.server");
@@ -248,13 +248,12 @@ export const getMyComplaints = createServerFn({ method: "GET" })
 
 export const getComplaintById = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ id: z.string().min(1) }).parse(data))
   .handler(async ({ data, context }): Promise<ComplaintRow | null> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
       const { data: c } = await mockSupabase.from("complaints").select("*").eq("id", data.id).maybeSingle();
       if (!c) return null;
-      if (context.role !== "admin" && c.user_id !== context.userId) return null;
       return {
         id: c.id, userId: c.user_id, title: c.title, description: c.description,
         category: c.category, priority: c.priority, status: c.status,
@@ -279,7 +278,7 @@ export const getComplaintById = createServerFn({ method: "GET" })
 
 export const getComplaintUpdates = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .validator((data: unknown) => z.object({ complaintId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ complaintId: z.string().min(1) }).parse(data))
   .handler(async ({ data, context }): Promise<ComplaintUpdateRow[]> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");

@@ -59,7 +59,7 @@ export const VALID_STATUSES = [
 ] as const;
 
 export const statusUpdateSchema = z.object({
-  complaintId: z.string().uuid("Invalid complaint ID"),
+  complaintId: z.string().min(1, "Invalid complaint ID"),
   status: z.enum(VALID_STATUSES, {
     errorMap: () => ({ message: "Invalid status value" }),
   }),
@@ -86,7 +86,7 @@ export const submitComplaintSchema = z.object({
 // ─── Notifications ────────────────────────────────────────────────────────
 
 export const markNotificationReadSchema = z.object({
-  notificationId: z.string().uuid("Invalid notification ID"),
+  notificationId: z.string().min(1, "Invalid notification ID"),
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────

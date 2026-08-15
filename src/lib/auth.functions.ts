@@ -68,7 +68,7 @@ export const register = createServerFn({ method: "POST" })
     clearRateLimit(`register:${ip}`);
 
     // Welcome email (non-blocking)
-    const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+    const appUrl = process.env.APP_URL ?? "http://localhost:8080";
     sendEmail({
       to: user.email,
       subject: "Welcome to Resolvely!",
@@ -160,7 +160,7 @@ export const getProfile = createServerFn({ method: "GET" })
 
 // ─── Google OAuth ─────────────────────────────────────────────────────────
 
-const GOOGLE_AUTH_REDIRECT_URI = `${process.env.APP_URL ?? "http://localhost:3000"}/auth/callback/google`;
+const GOOGLE_AUTH_REDIRECT_URI = `${process.env.APP_URL ?? "http://localhost:8080"}/auth/callback/google`;
 const GOOGLE_SCOPES = "openid email profile";
 
 export const getGoogleAuthUrl = createServerFn({ method: "GET" })

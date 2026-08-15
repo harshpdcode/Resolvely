@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   getComplaintById,
@@ -20,7 +20,22 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Sparkles, Clock, ShieldCheck, User, MessageSquare, CheckCircle2, AlertCircle, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  Sparkles,
+  Clock,
+  ShieldCheck,
+  User,
+  MessageSquare,
+  CheckCircle2,
+  AlertCircle,
+  Save,
+  Loader2,
+  Copy,
+  Check,
+  Tag,
+  Flame,
+} from "lucide-react";
 import {
   CATEGORY_LABEL,
   PRIORITY_LABEL,
@@ -42,7 +57,9 @@ function ComplaintDetail() {
   const queryClient = useQueryClient();
   const isAdmin = user.role === "admin";
   const [statusNote, setStatusNote] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [updating, setUpdating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const fetchComplaint = useServerFn(getComplaintById);
   const fetchUpdates = useServerFn(getComplaintUpdates);
@@ -59,26 +76,44 @@ function ComplaintDetail() {
     enabled: !!complaint,
   });
 
-  async function changeStatus(status: string) {
+  useEffect(() => {
+    if (complaint?.status) {
+      setSelectedStatus(complaint.status);
+    }
+  }, [complaint?.status]);
+
+  async function handleSaveStatus(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    const targetStatus = (selectedStatus || complaint?.status || "open") as (typeof STATUSES)[number];
+    
     setUpdating(true);
     try {
       await doUpdateStatus({
         data: {
           complaintId: id,
-          status: status as (typeof STATUSES)[number],
+          status: targetStatus,
           note: statusNote.trim() || undefined,
         },
       });
-      toast.success(`Status updated to ${STATUS_LABEL[status]}`);
+      toast.success(`Status updated to ${STATUS_LABEL[targetStatus] ?? targetStatus} with audit note saved!`);
       setStatusNote("");
       queryClient.invalidateQueries({ queryKey: ["complaint", id] });
       queryClient.invalidateQueries({ queryKey: ["complaint-updates", id] });
       queryClient.invalidateQueries({ queryKey: ["my-complaints"] });
       queryClient.invalidateQueries({ queryKey: ["all-complaints"] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update status");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update complaint status");
     } finally {
       setUpdating(false);
+    }
+  }
+
+  function copyTicketId() {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(id);
+      setCopied(true);
+      toast.success("Ticket ID copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
     }
   }
 
@@ -107,28 +142,44 @@ function ComplaintDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 animate-fade-in-up">
-      {/* Back button */}
-      <Link
-        to="/dashboard"
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
-      </Link>
+    <div className="mx-auto max-w-4xl space-y-6 animate-fade-in-up pb-16">
+      {/* Back button & Action Header */}
+      <div className="flex items-center justify-between">
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
+        </Link>
+        <button
+          onClick={copyTicketId}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-mono bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-lg border border-border/50 transition-colors"
+        >
+          {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+          <span>ID: {complaint.id}</span>
+        </button>
+      </div>
 
-      {/* Main Ticket Information */}
-      <Card className="border-border/70 shadow-sm overflow-hidden">
+      {/* Main Ticket Information Card */}
+      <Card className="border-border/70 shadow-sm overflow-hidden bg-card/90 backdrop-blur-md">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-xl sm:text-2xl font-extrabold tracking-tight">
                   {complaint.title}
                 </CardTitle>
               </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" /> Submitted on {formatDate(complaint.createdAt)}
-              </p>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> Submitted {formatDate(complaint.createdAt)}
+                </span>
+                {complaint.aiClassified && (
+                  <span className="inline-flex items-center gap-1 text-primary font-semibold">
+                    <Sparkles className="h-3 w-3" /> Auto-Triaged by Gemini AI
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="text-xs font-semibold capitalize bg-background">
@@ -158,75 +209,121 @@ function ComplaintDetail() {
           {complaint.aiReason && (
             <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
-                <Sparkles className="h-3.5 w-3.5" /> AI Triage Assessment
+                <Sparkles className="h-3.5 w-3.5" /> AI Triage Assessment (Google Gemini)
               </div>
-              <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
+              <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed font-medium">
                 {complaint.aiReason}
               </p>
             </div>
           )}
 
           {/* Admin Status Management Action Area */}
-          {isAdmin && (
-            <div className="rounded-xl border border-border/80 bg-accent/20 p-5 space-y-4">
-              <div className="flex items-center gap-2 font-bold text-sm">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Admin Actions: Update Status
+          {isAdmin ? (
+            <div className="rounded-2xl border border-border/80 bg-accent/20 p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <ShieldCheck className="h-4.5 w-4.5 text-primary" /> Admin Actions: Update Status & Log Audit Note
+                </div>
+                <Badge variant="outline" className="text-[10px] uppercase font-bold bg-primary/10 text-primary border-primary/30">
+                  Admin Control
+                </Badge>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1.5 sm:col-span-1">
-                  <Label className="text-xs font-semibold">Change Status</Label>
-                  <Select value={complaint.status} onValueChange={changeStatus} disabled={updating}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {STATUS_LABEL[s]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <form onSubmit={handleSaveStatus} className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {/* Select Status */}
+                  <div className="space-y-1.5 sm:col-span-1">
+                    <Label htmlFor="status-select" className="text-xs font-bold">
+                      Set New Status
+                    </Label>
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={(v) => setSelectedStatus(v)}
+                      disabled={updating}
+                    >
+                      <SelectTrigger id="status-select" className="bg-background font-semibold text-xs h-10">
+                        <SelectValue placeholder="Select Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUSES.map((s) => (
+                          <SelectItem key={s} value={s} className="text-xs font-semibold">
+                            {STATUS_LABEL[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Optional Resolution Note */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="status-note" className="text-xs font-bold">
+                      Resolution / Audit Note (Saved to Database)
+                    </Label>
+                    <Textarea
+                      id="status-note"
+                      value={statusNote}
+                      onChange={(e) => setStatusNote(e.target.value)}
+                      rows={2}
+                      placeholder="e.g., Refund processed via Stripe gateway. Ticket marked resolved."
+                      className="bg-background text-xs resize-none"
+                      disabled={updating}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="status-note" className="text-xs font-semibold">
-                    Optional Resolution / Audit Note
-                  </Label>
-                  <Textarea
-                    id="status-note"
-                    value={statusNote}
-                    onChange={(e) => setStatusNote(e.target.value)}
-                    rows={2}
-                    placeholder="Enter an optional note explaining the status change…"
-                    className="bg-background text-xs resize-none"
-                    disabled={updating}
-                  />
+                {/* Dedicated Save & Update Button */}
+                <div className="flex justify-end pt-1">
+                  <Button
+                    type="submit"
+                    disabled={updating || (selectedStatus === complaint.status && !statusNote.trim())}
+                    className="font-bold shadow-sm hover:shadow-glow-sm transition-all h-10 px-6 text-xs"
+                  >
+                    {updating ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving Changes…
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Save className="h-3.5 w-3.5" /> Update Status & Save Note
+                      </span>
+                    )}
+                  </Button>
                 </div>
-              </div>
+              </form>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-xs text-muted-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary shrink-0" />
+              <span>
+                Our support team is actively reviewing your ticket. Any status updates and notes from support staff will appear in the activity log below.
+              </span>
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Activity Timeline */}
-      <Card className="border-border/70 shadow-sm">
+      <Card className="border-border/70 shadow-sm bg-card/90">
         <CardHeader className="border-b border-border/50 pb-4">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-primary" /> Activity & Audit Log
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" /> Activity & Audit Log
+            </CardTitle>
+            <span className="text-xs text-muted-foreground font-medium">
+              {updates?.length ?? 0} {updates?.length === 1 ? "event" : "events"} recorded
+            </span>
+          </div>
         </CardHeader>
-        <CardContent className="pt-5">
+        <CardContent className="pt-6">
           {!updates || updates.length === 0 ? (
-            <div className="text-center py-6 text-xs text-muted-foreground">
-              No status changes recorded yet.
+            <div className="text-center py-8 text-xs text-muted-foreground">
+              No status changes recorded yet. When an admin updates this ticket, the audit history will appear here.
             </div>
           ) : (
-            <ol className="relative border-l border-border/80 ml-3 space-y-6 py-2">
+            <ol className="relative border-l-2 border-border/80 ml-3 space-y-6 py-2">
               {updates.map((u) => (
-                <li key={u.id} className="ml-6 space-y-1">
-                  <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary" />
+                <li key={u.id} className="ml-6 space-y-1.5">
+                  <div className="absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 border-background bg-primary shadow-sm" />
                   <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold">
                     <span>Status changed</span>
                     {u.fromStatus && (
@@ -239,7 +336,8 @@ function ComplaintDetail() {
                     </span>
                   </div>
                   {u.note && (
-                    <div className="rounded-lg border border-border/60 bg-muted/40 p-2.5 text-xs text-foreground mt-1.5">
+                    <div className="rounded-xl border border-primary/20 bg-muted/60 p-3 text-xs text-foreground mt-2 leading-relaxed">
+                      <span className="font-semibold text-primary block mb-0.5">Internal Note / Action:</span>
                       "{u.note}"
                     </div>
                   )}

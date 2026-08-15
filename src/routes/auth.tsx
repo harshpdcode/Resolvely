@@ -59,6 +59,21 @@ function PasswordInput({
   );
 }
 
+function formatAuthError(err: unknown): string {
+  if (err instanceof Error) {
+    try {
+      const parsed = JSON.parse(err.message);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.message) {
+        return parsed[0].message;
+      }
+    } catch {
+      // ignore
+    }
+    return err.message;
+  }
+  return "Authentication failed. Please check your credentials.";
+}
+
 function AuthPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -81,6 +96,9 @@ function AuthPage() {
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
+    if (!email.trim() || !password) {
+      return toast.error("Please enter both email and password.");
+    }
     setLoading(true);
     try {
       const result = await doLogin({ data: { email, password } });
@@ -88,7 +106,7 @@ function AuthPage() {
       toast.success("Welcome back to Resolvely!");
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign in failed. Check your email/password.");
+      toast.error(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -96,6 +114,10 @@ function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!fullName.trim()) return toast.error("Please enter your full name.");
+    if (!email.trim()) return toast.error("Please enter a valid email address.");
+    if (password.length < 6) return toast.error("Password must be at least 6 characters.");
+
     setLoading(true);
     try {
       const result = await doRegister({ data: { fullName, email, password } });
@@ -107,7 +129,7 @@ function AuthPage() {
       );
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign up failed");
+      toast.error(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -118,10 +140,8 @@ function AuthPage() {
       const { url } = await doGetGoogleAuthUrl({});
       window.location.href = url;
     } catch (err) {
-      toast.error(
-        err instanceof Error && err.message.includes("not configured")
-          ? "Google OAuth is not configured yet. Use standard email login."
-          : "Google sign-in failed"
+      toast.info(
+        "Google OAuth is optional and requires Google Cloud API credentials. Please use standard email & password signup above!"
       );
     }
   }
@@ -264,8 +284,8 @@ function AuthPage() {
                       id="su-pass"
                       value={password}
                       onChange={setPassword}
-                      minLength={8}
-                      placeholder="Min 8 chars, 1 uppercase, 1 special"
+                      minLength={6}
+                      placeholder="At least 6 characters"
                       required
                     />
                   </div>

@@ -18,7 +18,7 @@ function isMockMode() {
 // ─── Register ─────────────────────────────────────────────────────────────
 
 export const register = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => registerSchema.parse(data))
+  .validator((data: unknown) => registerSchema.parse(data))
   .handler(async ({ data }): Promise<{ token: string; role: "admin" | "user"; userId: string }> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
@@ -77,7 +77,7 @@ export const register = createServerFn({ method: "POST" })
 // ─── Login ────────────────────────────────────────────────────────────────
 
 export const login = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => loginSchema.parse(data))
+  .validator((data: unknown) => loginSchema.parse(data))
   .handler(async ({ data }): Promise<{ token: string; role: "admin" | "user"; userId: string; fullName: string | null }> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
@@ -169,7 +169,7 @@ export const getGoogleAuthUrl = createServerFn({ method: "GET" })
   });
 
 export const handleGoogleCallback = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ code: z.string() }).parse(data))
+  .validator((data: unknown) => z.object({ code: z.string() }).parse(data))
   .handler(async ({ data }): Promise<{ token: string; role: "admin" | "user"; userId: string; fullName: string | null }> => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;

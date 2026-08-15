@@ -156,7 +156,7 @@ function serializeUpdate(u: any): ComplaintUpdateRow {
 
 export const classifyComplaint = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((data: unknown) => complaintSchema.parse(data))
+  .validator((data: unknown) => complaintSchema.parse(data))
   .handler(async ({ data }): Promise<ClassificationResult> => {
     return callGemini(data.title, data.description);
   });
@@ -165,7 +165,7 @@ export const classifyComplaint = createServerFn({ method: "POST" })
 
 export const submitComplaint = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((data: unknown) => submitComplaintSchema.parse(data))
+  .validator((data: unknown) => submitComplaintSchema.parse(data))
   .handler(async ({ data, context }): Promise<ComplaintRow> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
@@ -248,7 +248,7 @@ export const getMyComplaints = createServerFn({ method: "GET" })
 
 export const getComplaintById = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<ComplaintRow | null> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
@@ -279,7 +279,7 @@ export const getComplaintById = createServerFn({ method: "GET" })
 
 export const getComplaintUpdates = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((data: unknown) => z.object({ complaintId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ complaintId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<ComplaintUpdateRow[]> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
@@ -314,7 +314,7 @@ export const getComplaintUpdates = createServerFn({ method: "GET" })
 
 export const updateComplaintStatus = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((data: unknown) => statusUpdateSchema.parse(data))
+  .validator((data: unknown) => statusUpdateSchema.parse(data))
   .handler(async ({ data, context }): Promise<ComplaintRow> => {
     if (context.role !== "admin") {
       throw new Error("Forbidden: only admins can update complaint status");

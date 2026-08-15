@@ -8,7 +8,7 @@ import {
   getComplaintUpdates,
   updateComplaintStatus,
 } from "@/lib/complaints.functions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { toast as sonnerToast } from "sonner";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, Clock, ShieldCheck, User, MessageSquare, CheckCircle2, AlertCircle, Send } from "lucide-react";
 import {
   CATEGORY_LABEL,
   PRIORITY_LABEL,
@@ -43,6 +42,7 @@ function ComplaintDetail() {
   const queryClient = useQueryClient();
   const isAdmin = user.role === "admin";
   const [statusNote, setStatusNote] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   const fetchComplaint = useServerFn(getComplaintById);
   const fetchUpdates = useServerFn(getComplaintUpdates);
@@ -60,6 +60,7 @@ function ComplaintDetail() {
   });
 
   async function changeStatus(status: string) {
+    setUpdating(true);
     try {
       await doUpdateStatus({
         data: {
@@ -68,7 +69,7 @@ function ComplaintDetail() {
           note: statusNote.trim() || undefined,
         },
       });
-      sonnerToast.success(`Status set to ${STATUS_LABEL[status]}`);
+      toast.success(`Status updated to ${STATUS_LABEL[status]}`);
       setStatusNote("");
       queryClient.invalidateQueries({ queryKey: ["complaint", id] });
       queryClient.invalidateQueries({ queryKey: ["complaint-updates", id] });
@@ -76,115 +77,174 @@ function ComplaintDetail() {
       queryClient.invalidateQueries({ queryKey: ["all-complaints"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update status");
+    } finally {
+      setUpdating(false);
     }
   }
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (!complaint) return <p className="text-sm text-muted-foreground">Complaint not found.</p>;
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-4">
+        <div className="h-6 w-32 animate-pulse rounded-md bg-muted" />
+        <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+      </div>
+    );
+  }
+
+  if (!complaint) {
+    return (
+      <div className="mx-auto max-w-xl text-center py-16">
+        <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-3" />
+        <h2 className="text-xl font-bold">Complaint Not Found</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          This ticket may have been removed or you do not have permission to view it.
+        </p>
+        <Link to="/dashboard" className="mt-5 inline-block">
+          <Button variant="outline">Back to Dashboard</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 animate-fade-in-up">
+      {/* Back button */}
       <Link
         to="/dashboard"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" /> Back
+        <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
       </Link>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-2xl">{complaint.title}</CardTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Submitted {formatDate(complaint.createdAt)}
+      {/* Main Ticket Information */}
+      <Card className="border-border/70 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                  {complaint.title}
+                </CardTitle>
+              </div>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Submitted on {formatDate(complaint.createdAt)}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{CATEGORY_LABEL[complaint.category]}</Badge>
-              <Badge variant="outline" className={priorityBadgeClass(complaint.priority)}>
-                {PRIORITY_LABEL[complaint.priority]}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-xs font-semibold capitalize bg-background">
+                {CATEGORY_LABEL[complaint.category] ?? complaint.category}
               </Badge>
-              <Badge variant="outline" className={statusBadgeClass(complaint.status)}>
-                {STATUS_LABEL[complaint.status]}
+              <Badge variant="outline" className={`text-xs font-semibold capitalize ${priorityBadgeClass(complaint.priority)}`}>
+                {PRIORITY_LABEL[complaint.priority] ?? complaint.priority}
+              </Badge>
+              <Badge variant="outline" className={`text-xs font-semibold capitalize ${statusBadgeClass(complaint.status)}`}>
+                {STATUS_LABEL[complaint.status] ?? complaint.status}
               </Badge>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-6 space-y-6">
+          {/* Issue Description */}
           <div>
-            <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">
-              Description
+            <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Complaint Description
             </div>
-            <p className="whitespace-pre-wrap text-sm">{complaint.description}</p>
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-4 text-sm leading-relaxed whitespace-pre-wrap">
+              {complaint.description}
+            </div>
           </div>
+
+          {/* AI Reason Card */}
           {complaint.aiReason && (
-            <div className="rounded-lg border bg-accent/30 p-3">
-              <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
-                <Sparkles className="h-3 w-3 text-primary" /> AI triage
+            <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+                <Sparkles className="h-3.5 w-3.5" /> AI Triage Assessment
               </div>
-              <p className="text-sm">{complaint.aiReason}</p>
+              <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
+                {complaint.aiReason}
+              </p>
             </div>
           )}
+
+          {/* Admin Status Management Action Area */}
           {isAdmin && (
-            <div className="space-y-3 rounded-lg border p-3">
-              <span className="text-sm font-medium">Change status:</span>
-              <div className="flex flex-wrap items-center gap-3">
-                <Select value={complaint.status} onValueChange={changeStatus}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {STATUS_LABEL[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="rounded-xl border border-border/80 bg-accent/20 p-5 space-y-4">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <ShieldCheck className="h-4 w-4 text-primary" /> Admin Actions: Update Status
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="status-note" className="text-xs text-muted-foreground">
-                  Optional note
-                </Label>
-                <Textarea
-                  id="status-note"
-                  value={statusNote}
-                  onChange={(e) => setStatusNote(e.target.value)}
-                  rows={2}
-                  placeholder="Add a note for this status change…"
-                  className="text-sm"
-                />
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-1">
+                  <Label className="text-xs font-semibold">Change Status</Label>
+                  <Select value={complaint.status} onValueChange={changeStatus} disabled={updating}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {STATUS_LABEL[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="status-note" className="text-xs font-semibold">
+                    Optional Resolution / Audit Note
+                  </Label>
+                  <Textarea
+                    id="status-note"
+                    value={statusNote}
+                    onChange={(e) => setStatusNote(e.target.value)}
+                    rows={2}
+                    placeholder="Enter an optional note explaining the status change…"
+                    className="bg-background text-xs resize-none"
+                    disabled={updating}
+                  />
+                </div>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity</CardTitle>
+      {/* Activity Timeline */}
+      <Card className="border-border/70 shadow-sm">
+        <CardHeader className="border-b border-border/50 pb-4">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-primary" /> Activity & Audit Log
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-5">
           {!updates || updates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No status changes yet.</p>
+            <div className="text-center py-6 text-xs text-muted-foreground">
+              No status changes recorded yet.
+            </div>
           ) : (
-            <ol className="space-y-3">
+            <ol className="relative border-l border-border/80 ml-3 space-y-6 py-2">
               {updates.map((u) => (
-                <li key={u.id} className="flex items-start gap-3">
-                  <div className="mt-1.5 h-2 w-2 rounded-full bg-primary" />
-                  <div>
-                    <div className="text-sm">
-                      Status changed{" "}
-                      {u.fromStatus && (
-                        <span className="text-muted-foreground">
-                          from <b>{STATUS_LABEL[u.fromStatus]}</b>
-                        </span>
-                      )}{" "}
-                      to <b>{u.toStatus ? STATUS_LABEL[u.toStatus] : "—"}</b>
+                <li key={u.id} className="ml-6 space-y-1">
+                  <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary" />
+                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold">
+                    <span>Status changed</span>
+                    {u.fromStatus && (
+                      <span className="text-muted-foreground font-normal">
+                        from <b className="text-foreground">{STATUS_LABEL[u.fromStatus] ?? u.fromStatus}</b>
+                      </span>
+                    )}
+                    <span>
+                      to <b className="text-primary">{u.toStatus ? (STATUS_LABEL[u.toStatus] ?? u.toStatus) : "—"}</b>
+                    </span>
+                  </div>
+                  {u.note && (
+                    <div className="rounded-lg border border-border/60 bg-muted/40 p-2.5 text-xs text-foreground mt-1.5">
+                      "{u.note}"
                     </div>
-                    {u.note && <p className="mt-0.5 text-sm text-muted-foreground">{u.note}</p>}
-                    <div className="text-xs text-muted-foreground">{formatDate(u.createdAt)}</div>
+                  )}
+                  <div className="text-[11px] text-muted-foreground pt-0.5">
+                    {formatDate(u.createdAt)}
                   </div>
                 </li>
               ))}

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Eye, EyeOff, Lock, Mail, User, ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
 
 const searchSchema = z.object({ mode: z.enum(["signin", "signup"]).optional() });
 
@@ -45,12 +45,12 @@ function PasswordInput({
         minLength={minLength}
         placeholder={placeholder}
         required={required}
-        className="pr-10"
+        className="pr-10 bg-background/50 focus:bg-background transition-colors"
       />
       <button
         type="button"
         onClick={() => setShow((v) => !v)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
         aria-label={show ? "Hide password" : "Show password"}
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -85,10 +85,10 @@ function AuthPage() {
     try {
       const result = await doLogin({ data: { email, password } });
       saveToken(result.token);
-      toast.success("Welcome back!");
+      toast.success("Welcome back to Resolvely!");
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign in failed");
+      toast.error(err instanceof Error ? err.message : "Sign in failed. Check your email/password.");
     } finally {
       setLoading(false);
     }
@@ -102,8 +102,8 @@ function AuthPage() {
       saveToken(result.token);
       toast.success(
         result.role === "admin"
-          ? "Account created — you're the first user, so you're an Admin!"
-          : "Account created — you're signed in"
+          ? "Admin Account created! You have full access."
+          : "Account created successfully!"
       );
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
@@ -120,112 +120,176 @@ function AuthPage() {
     } catch (err) {
       toast.error(
         err instanceof Error && err.message.includes("not configured")
-          ? "Google OAuth is not configured yet. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+          ? "Google OAuth is not configured yet. Use standard email login."
           : "Google sign-in failed"
       );
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-surface px-4 py-12">
-      <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2 font-semibold">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-hero text-primary-foreground shadow-glow">
-            <Sparkles className="h-4 w-4" />
-          </span>
-          Resolvely
-        </Link>
-        <Card className="shadow-elevated">
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>
-              Sign in or create an account to submit and track complaints.
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-surface px-4 py-12 selection:bg-primary/20 selection:text-primary">
+      {/* Ambient background glow */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[450px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-hero opacity-20 blur-[100px] animate-pulse-glow"
+        aria-hidden="true"
+      />
+
+      <div className="w-full max-w-md animate-fade-in-up">
+        {/* Back link & Logo */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to home
+          </Link>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" /> End-to-end encrypted
+          </div>
+        </div>
+
+        <div className="text-center mb-6">
+          <Link to="/" className="inline-flex items-center gap-2 font-bold text-2xl tracking-tight">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-glow-sm">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <span>Resolvely</span>
+          </Link>
+          <p className="mt-2 text-sm text-muted-foreground">
+            AI-powered customer ticket & complaint management
+          </p>
+        </div>
+
+        <Card className="border-border/80 bg-card/90 shadow-elevated backdrop-blur-xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold text-center">
+              {tab === "signin" ? "Sign in to your account" : "Create your account"}
+            </CardTitle>
+            <CardDescription className="text-center text-xs">
+              {tab === "signin"
+                ? "Enter your credentials below to access your tickets"
+                : "Join Resolvely to submit and track complaints with AI triage"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/60">
+                <TabsTrigger value="signin" className="font-semibold text-xs py-2 transition-all">
+                  Sign in
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="font-semibold text-xs py-2 transition-all">
+                  Create account
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin" className="mt-4">
-                <form onSubmit={handleSignIn} className="space-y-3">
+              <TabsContent value="signin" className="mt-5 space-y-4">
+                <form onSubmit={handleSignIn} className="space-y-3.5">
                   <div className="space-y-1.5">
-                    <Label htmlFor="si-email">Email</Label>
-                    <Input
-                      id="si-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="email"
-                    />
+                    <Label htmlFor="si-email" className="text-xs font-semibold">
+                      Email address
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="si-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        required
+                        autoComplete="email"
+                        className="bg-background/50 focus:bg-background transition-colors"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="si-pass">Password</Label>
+                    <Label htmlFor="si-pass" className="text-xs font-semibold">
+                      Password
+                    </Label>
                     <PasswordInput
                       id="si-pass"
                       value={password}
                       onChange={setPassword}
+                      placeholder="••••••••"
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Signing in…" : "Sign in"}
+                  <Button type="submit" className="w-full h-10 font-semibold shadow-sm hover:shadow-glow-sm transition-all" disabled={loading}>
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Signing in…
+                      </span>
+                    ) : (
+                      "Sign in"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup" className="mt-4">
-                <form onSubmit={handleSignUp} className="space-y-3">
+              <TabsContent value="signup" className="mt-5 space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-3.5">
                   <div className="space-y-1.5">
-                    <Label htmlFor="su-name">Full name</Label>
+                    <Label htmlFor="su-name" className="text-xs font-semibold">
+                      Full name
+                    </Label>
                     <Input
                       id="su-name"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Jane Doe"
                       required
                       autoComplete="name"
+                      className="bg-background/50 focus:bg-background transition-colors"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="su-email">Email</Label>
+                    <Label htmlFor="su-email" className="text-xs font-semibold">
+                      Email address
+                    </Label>
                     <Input
                       id="su-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
                       required
                       autoComplete="email"
+                      className="bg-background/50 focus:bg-background transition-colors"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="su-pass">Password</Label>
+                    <Label htmlFor="su-pass" className="text-xs font-semibold">
+                      Password
+                    </Label>
                     <PasswordInput
                       id="su-pass"
                       value={password}
                       onChange={setPassword}
                       minLength={8}
-                      placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special"
+                      placeholder="Min 8 chars, 1 uppercase, 1 special"
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Creating…" : "Create account"}
+                  <Button type="submit" className="w-full h-10 font-semibold shadow-sm hover:shadow-glow-sm transition-all" disabled={loading}>
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Creating account…
+                      </span>
+                    ) : (
+                      "Create free account"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
 
-            <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="h-px flex-1 bg-border" /> OR{" "}
-              <div className="h-px flex-1 bg-border" />
+            <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <div className="h-px flex-1 bg-border" /> OR <div className="h-px flex-1 bg-border" />
             </div>
+
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full h-10 hover:bg-accent/40 font-medium transition-all"
               onClick={handleGoogle}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">

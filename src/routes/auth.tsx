@@ -160,7 +160,7 @@ function AuthPage() {
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-surface px-4 py-12 selection:bg-primary/20 selection:text-primary">
       {/* Ambient background glow */}
       <div
-        className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-[450px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-hero opacity-20 blur-[100px] animate-pulse-glow"
+        className="pointer-events-none absolute left-1/2 top-1/3 -z-10 h-112.5 w-125 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-hero opacity-20 blur-[100px] animate-pulse-glow"
         aria-hidden="true"
       />
 

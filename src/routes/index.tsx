@@ -56,15 +56,15 @@ function Landing() {
     <div className="relative min-h-screen overflow-hidden bg-gradient-surface selection:bg-primary/20 selection:text-primary">
       {/* Background Ambient Glow Orbs */}
       <div
-        className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[550px] w-[750px] -translate-x-1/2 rounded-full bg-gradient-hero opacity-25 blur-[120px] animate-pulse-glow"
+        className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-137.5 w-187.5 -translate-x-1/2 rounded-full bg-gradient-hero opacity-25 blur-[120px] animate-pulse-glow"
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute top-[600px] -right-40 -z-10 h-[400px] w-[500px] rounded-full bg-primary/20 blur-[100px] animate-float-delayed"
+        className="pointer-events-none absolute top-150 -right-40 -z-10 h-100 w-125 rounded-full bg-primary/20 blur-[100px] animate-float-delayed"
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute top-[1100px] -left-40 -z-10 h-[450px] w-[500px] rounded-full bg-info/15 blur-[110px] animate-float"
+        className="pointer-events-none absolute top-275 -left-40 -z-10 h-112.5 w-125 rounded-full bg-info/15 blur-[110px] animate-float"
         aria-hidden="true"
       />
 

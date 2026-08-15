@@ -8,4 +8,17 @@ export default defineConfig({
       disableCsrfMiddlewareWarning: true,
     },
   },
+  optimizeDeps: {
+    include: [
+      "@radix-ui/react-select",
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-tooltip",
+      "lucide-react",
+      "recharts",
+    ],
+  },
 });

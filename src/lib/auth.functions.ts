@@ -53,7 +53,7 @@ export const register = createServerFn({ method: "POST" })
     const adminCount = await prisma.userRole.count({ where: { role: "admin" } });
     const role: "admin" | "user" = adminCount === 0 ? "admin" : "user";
 
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: any) => {
       const u = await tx.user.create({
         data: {
           email: data.email,
@@ -227,7 +227,7 @@ export const handleGoogleCallback = createServerFn({ method: "POST" })
       // Random password for OAuth users (they can't use password login)
       const passwordHash = await hashPassword(crypto.randomUUID());
 
-      user = await prisma.$transaction(async (tx) => {
+      user = await prisma.$transaction(async (tx: any) => {
         const u = await tx.user.create({
           data: {
             email: googleUser.email,

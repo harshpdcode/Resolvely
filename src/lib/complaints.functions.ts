@@ -179,9 +179,9 @@ export const submitComplaint = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ComplaintRow> => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
-      const { data: user } = await mockSupabase.auth.getUser();
-      const userEmail = user?.email || (context.role === "admin" ? "admin@example.com" : "customer@example.com");
-      const userName = user?.user_metadata?.full_name || "Customer User";
+      const { data: userRecord } = await mockSupabase.from("profiles").select("*").eq("id", context.userId).maybeSingle();
+      const userEmail = (userRecord as any)?.email || (context.role === "admin" ? "admin@example.com" : "customer@example.com");
+      const userName = (userRecord as any)?.full_name || (context.role === "admin" ? "System Admin" : "Customer User");
 
       const result = await mockSupabase.from("complaints").insert({
         user_id: context.userId,
@@ -263,7 +263,7 @@ export const getMyComplaints = createServerFn({ method: "GET" })
         resolvedAt: c.resolved_at ?? null,
       }));
       if (context.role === "admin") return allComplaints;
-      return allComplaints.filter((c) => c.userId === context.userId);
+      return allComplaints.filter((c: any) => c.userId === context.userId);
     }
 
     const { prisma } = await import("@/integrations/db/client.server");
@@ -355,7 +355,7 @@ export const getComplaintUpdates = createServerFn({ method: "GET" })
       include: { author: true },
     });
 
-    return updates.map((u) => ({
+    return updates.map((u: any) => ({
       id: u.id,
       complaintId: u.complaintId,
       authorId: u.authorId,
@@ -439,7 +439,7 @@ export const updateComplaintStatus = createServerFn({ method: "POST" })
 
     const fromStatus = complaint.status;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.complaint.update({
         where: { id: data.complaintId },
         data: {
@@ -582,8 +582,8 @@ export const addComplaintComment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (isMockMode()) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
-      const { data: user } = await mockSupabase.auth.getUser();
-      const authorName = user?.user_metadata?.full_name || (context.role === "admin" ? "Support Admin" : "Customer");
+      const { data: userRecord } = await mockSupabase.from("profiles").select("*").eq("id", context.userId).maybeSingle();
+      const authorName = (userRecord as any)?.full_name || (context.role === "admin" ? "Support Admin" : "Customer");
 
       await mockSupabase.from("complaint_updates").insert({
         complaint_id: data.complaintId,

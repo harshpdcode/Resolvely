@@ -138,11 +138,11 @@ export const getProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<{ email: string; fullName: string | null; role: "admin" | "user" }> => {
     if (context.isMock) {
       const { mockSupabase } = await import("@/integrations/supabase/mock-client");
-      const { data } = await mockSupabase.auth.getUser();
+      const { data: profile } = await mockSupabase.from("profiles").select("*").eq("id", context.userId).maybeSingle();
       const role = context.role;
       return {
-        email: data.user?.email ?? (role === "admin" ? "admin@example.com" : "user@example.com"),
-        fullName: data.user?.user_metadata?.full_name ?? (role === "admin" ? "System Admin" : "User Account"),
+        email: profile?.email ?? (role === "admin" ? "admin@example.com" : "customer@example.com"),
+        fullName: profile?.full_name ?? (role === "admin" ? "System Admin" : "Customer User"),
         role,
       };
     }

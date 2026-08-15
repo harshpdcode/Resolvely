@@ -41,10 +41,11 @@ export function getSession(): ClientSession | null {
   try {
     // Handle mock token format in fallback mode
     if (token.startsWith("mock-jwt-token-")) {
-      const id = token.replace("mock-jwt-token-", "") || "mock-admin-id";
+      const id = token.replace("mock-jwt-token-", "") || "user-customer-1";
+      const role: "admin" | "user" = id === "user-admin-1" ? "admin" : "user";
       return {
         userId: id,
-        role: "admin",
+        role,
         exp: Math.floor(Date.now() / 1000) + 86400 * 7,
       };
     }

@@ -58,32 +58,28 @@ async function getMockContext(): Promise<TokenPayload & { isMock: boolean }> {
 
 // ─── Auth middleware ──────────────────────────────────────────────────────
 
-export type AuthContext = TokenPayload & { isMock?: boolean };
-
 export const requireAuth = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
+    const request = getRequest();
+    const authHeader = request?.headers?.get("authorization");
+    
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "").trim();
+      if (token) {
+        try {
+          const payload = await verifyToken(token);
+          return next({ context: { ...payload, isMock: isMockMode() } });
+        } catch {
+          // If token verification fails in mock mode, proceed to mock fallback
+        }
+      }
+    }
+
     if (isMockMode()) {
       const ctx = await getMockContext();
       return next({ context: ctx });
     }
 
-    const request = getRequest();
-    if (!request?.headers) {
-      throw new Error("Unauthorized: No request headers available");
-    }
-
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      throw new Error("Unauthorized: Bearer token required");
-    }
-
-    const token = authHeader.replace("Bearer ", "").trim();
-    if (!token) {
-      throw new Error("Unauthorized: Empty token");
-    }
-
-    const payload = await verifyToken(token);
-
-    return next({ context: { ...payload, isMock: false } });
+    throw new Error("Unauthorized: Bearer token required");
   }
 );

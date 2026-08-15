@@ -107,6 +107,49 @@ export function statusChangeEmailHtml(opts: {
 </html>`;
 }
 
+export function resolutionEmailHtml(opts: {
+  complaintTitle: string;
+  resolutionNote?: string;
+  complaintId: string;
+  appUrl: string;
+}): string {
+  const url = `${opts.appUrl}/complaints/${opts.complaintId}`;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; margin: 0; padding: 40px 0;">
+  <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="background: #059669; padding: 24px 32px;">
+      <h1 style="color: #fff; margin: 0; font-size: 20px;">✅ Resolvely • Issue Resolved</h1>
+    </div>
+    <div style="padding: 32px;">
+      <h2 style="margin: 0 0 8px; font-size: 18px; color: #111827;">Your complaint has been resolved! 🎉</h2>
+      <p style="color: #6b7280; margin: 0 0 20px; font-size: 14px;">Our support team has investigated and marked your ticket as resolved.</p>
+
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #f0fdf4;">
+        <div style="font-weight: 600; color: #111827; margin-bottom: 6px;">${opts.complaintTitle}</div>
+        <div style="display: inline-block; background: #22c55e22; color: #15803d; border: 1px solid #22c55e44; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600;">Status: Resolved</div>
+        ${
+          opts.resolutionNote
+            ? `<div style="margin-top: 12px; font-size: 13px; color: #374151; border-top: 1px dashed #bbf7d0; padding-top: 10px;">
+                <b>Resolution Note from Support:</b><br/>${opts.resolutionNote}
+               </div>`
+            : ""
+        }
+      </div>
+
+      <a href="${url}" style="display: inline-block; background: #059669; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Ticket & Leave Rating →</a>
+    </div>
+    <div style="padding: 16px 32px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
+      Thank you for using Resolvely AI Complaint Management System.
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 export function welcomeEmailHtml(opts: {
   fullName: string;
   appUrl: string;

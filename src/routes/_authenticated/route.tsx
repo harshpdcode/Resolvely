@@ -1,17 +1,25 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sparkles, LayoutDashboard, PlusCircle, ShieldCheck, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getSession, clearToken, isAdmin as clientIsAdmin } from "@/integrations/auth/client";
+import { getProfile } from "@/lib/auth.functions";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    const session = getSession();
+    if (!session) throw redirect({ to: "/auth" });
+    return {
+      user: {
+        id: session.userId,
+        role: session.role,
+      },
+    };
   },
   component: AuthedLayout,
 });
@@ -22,21 +30,14 @@ function AuthedLayout() {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const doGetProfile = useServerFn(getProfile);
 
-  const { data: isAdmin } = useQuery({
-    queryKey: ["is-admin", user.id],
-    queryFn: async () => {
-      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      return Boolean(data);
-    },
-  });
+  const isAdmin = user.role === "admin";
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user.id],
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("full_name,email").eq("id", user.id).maybeSingle();
-      return data;
-    },
+    queryFn: () => doGetProfile({}),
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
@@ -44,7 +45,7 @@ function AuthedLayout() {
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    clearToken();
     navigate({ to: "/auth", replace: true });
   }
 
@@ -72,7 +73,7 @@ function AuthedLayout() {
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition",
                 pathname === n.to || pathname.startsWith(n.to + "/")
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
               <n.icon className="h-4 w-4" /> {n.label}
@@ -81,8 +82,12 @@ function AuthedLayout() {
         </nav>
         <div className="border-t p-3">
           <div className="mb-2 px-3 text-xs">
-            <div className="truncate font-medium text-foreground">{profile?.full_name ?? user.email}</div>
-            <div className="truncate text-muted-foreground">{profile?.email ?? user.email}</div>
+            <div className="truncate font-medium text-foreground">
+              {profile?.fullName ?? profile?.email ?? user.id}
+            </div>
+            <div className="truncate text-muted-foreground">
+              {profile?.email ?? ""}
+            </div>
           </div>
           <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" /> Sign out
@@ -95,22 +100,39 @@ function AuthedLayout() {
           <div className="flex items-center gap-2 font-semibold md:hidden">
             <Sparkles className="h-4 w-4 text-primary" /> Resolvely
           </div>
-          <div className="ml-auto md:hidden">
-            <Button variant="outline" size="sm" onClick={() => setMobileOpen((v) => !v)}>Menu</Button>
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="md:hidden"
+            >
+              Menu
+            </Button>
           </div>
         </header>
+
         {mobileOpen && (
           <div className="border-b bg-card px-4 py-2 md:hidden">
             {nav.map((n) => (
-              <Link key={n.to} to={n.to} className="flex items-center gap-2 rounded px-2 py-2 text-sm hover:bg-accent">
+              <Link
+                key={n.to}
+                to={n.to}
+                className="flex items-center gap-2 rounded px-2 py-2 text-sm hover:bg-accent"
+              >
                 <n.icon className="h-4 w-4" /> {n.label}
               </Link>
             ))}
-            <button onClick={signOut} className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm hover:bg-accent">
+            <button
+              onClick={signOut}
+              className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm hover:bg-accent"
+            >
               <LogOut className="h-4 w-4" /> Sign out
             </button>
           </div>
         )}
+
         <main className="min-w-0 flex-1 p-4 md:p-8">
           <Outlet />
         </main>

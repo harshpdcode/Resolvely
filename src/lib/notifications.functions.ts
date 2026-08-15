@@ -52,7 +52,7 @@ export const getNotifications = createServerFn({ method: "GET" })
 
 export const markNotificationRead = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((data: unknown) => markNotificationReadSchema.parse(data))
+  .validator((data: unknown) => markNotificationReadSchema.parse(data))
   .handler(async ({ data, context }): Promise<{ ok: boolean }> => {
     if (isMockMode()) return { ok: true };
 

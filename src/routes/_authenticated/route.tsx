@@ -58,12 +58,12 @@ function AuthedLayout() {
   ] as const;
 
   return (
-    <div className="flex min-h-screen bg-gradient-surface selection:bg-primary/20 selection:text-primary">
-      {/* Desktop Sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r border-border/70 bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground md:flex md:flex-col justify-between">
-        <div>
-          {/* Logo */}
-          <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-6 font-bold text-base tracking-tight">
+    <div className="flex h-screen w-screen overflow-hidden bg-gradient-surface selection:bg-primary/20 selection:text-primary">
+      {/* Desktop Fixed Sidebar (Never scrolls with page content) */}
+      <aside className="hidden h-screen w-64 shrink-0 flex-col justify-between border-r border-border/70 bg-sidebar/90 backdrop-blur-xl text-sidebar-foreground md:flex">
+        <div className="flex flex-col flex-1 overflow-y-auto">
+          {/* Logo Brand Header */}
+          <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-6 font-bold text-base tracking-tight">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-glow-sm">
               <Sparkles className="h-4 w-4" />
             </span>
@@ -73,7 +73,10 @@ function AuthedLayout() {
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-3 space-y-1.5">
+          <nav className="p-3 space-y-1.5 flex-1">
+            <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Menu
+            </div>
             {nav.map((n) => {
               const isActive = pathname === n.to || pathname.startsWith(n.to + "/");
               return (
@@ -95,10 +98,10 @@ function AuthedLayout() {
           </nav>
         </div>
 
-        {/* User Footer Profile */}
-        <div className="border-t border-sidebar-border p-3 space-y-2">
-          <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-background/50 border border-border/40">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+        {/* User Footer Profile & Sign out */}
+        <div className="shrink-0 border-t border-sidebar-border p-3 space-y-2 bg-sidebar/50">
+          <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-background/60 border border-border/40">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
               {profile?.fullName ? profile.fullName.charAt(0) : "U"}
             </div>
             <div className="min-w-0 flex-1">
@@ -109,7 +112,7 @@ function AuthedLayout() {
                 {isAdmin ? (
                   <span className="text-primary font-bold">Admin</span>
                 ) : (
-                  <span>User</span>
+                  <span>Customer</span>
                 )}
               </div>
             </div>
@@ -123,13 +126,18 @@ function AuthedLayout() {
           >
             <LogOut className="mr-2 h-3.5 w-3.5" /> Sign out
           </Button>
+
+          {/* Project Author Credit Badge */}
+          <div className="px-2 pt-1 text-center text-[10px] text-muted-foreground/75">
+            Resolvely • Diya Khatri
+          </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/60 bg-background/80 px-4 backdrop-blur-md md:px-8">
+      {/* Main Independently Scrollable Content Area */}
+      <div className="flex min-w-0 flex-1 flex-col h-screen overflow-y-auto">
+        {/* Sticky Top Header */}
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border/60 bg-background/85 px-4 backdrop-blur-md md:px-8">
           <div className="flex items-center gap-2.5 font-bold text-base md:hidden">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-glow-sm">
               <Sparkles className="h-4 w-4" />

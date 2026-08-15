@@ -1,0 +1,169 @@
+================================================================================
+                       RESOLVELY — PROJECT GUIDE & DOCUMENTATION
+         AI-Powered Complaint Management System with Real-Time AI Triage
+================================================================================
+
+Project Name    : Resolvely
+Author / Student: Diya Khatri
+Enrollment No.  : 2504070200014
+Repository URL  : https://github.com/harshpdcode/Resolvely
+Local Server    : http://localhost:8080
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+Resolvely is a modern, enterprise-grade complaint intake and management platform.
+It eliminates support bottlenecks by autonomously classifying, prioritizing,
+and summarizing incoming customer complaints the instant they are submitted
+using Google Gemini 2.5 Flash.
+
+Key Pillars:
+- Zero-Latency Autonomous AI Triage (Category, Urgency, Human Reasoning)
+- Dual Role Architecture (Customer View vs. Support Admin Control Center)
+- Strict Privacy Isolation (Customers only see their own tickets)
+- 5-Stage Ticket Lifecycle Workflow (Submission -> Open -> In Progress -> Resolved -> Closed)
+- Complete Audit History & Activity Trail
+- Real-Time SLA Monitoring & 48-Hour Breach Warning Engine
+- Offline Resilience & Zero-Downtime Mock Database Fallback
+
+================================================================================
+2. TEST ACCOUNTS & LOGIN CREDENTIALS
+================================================================================
+
+All test accounts use the password: Password123!
+
+--------------------------------------------------------------------------------
+ROLE            NAME            EMAIL                   PASSWORD        PORTAL / ACCESS
+--------------------------------------------------------------------------------
+🛡️ ADMIN        System Admin    admin@example.com       Password123!    Full Admin Console,
+                                                                        Analytics & SLA,
+                                                                        AI Briefings,
+                                                                        CSV Export,
+                                                                        Ticket Resolver
+
+👤 CUSTOMER 1   Alex Johnson    customer1@example.com   Password123!    Customer Portal,
+                                                                        Personal Tickets,
+                                                                        AI Triage & CSAT
+
+👤 CUSTOMER 2   Sarah Miller    customer2@example.com   Password123!    Customer Portal,
+                                                                        Isolated Tickets,
+                                                                        Issue Templates
+
+👤 CUSTOMER 3   David Chen      customer3@example.com   Password123!    Customer Portal,
+                                                                        Ticket Chat & FAQ
+--------------------------------------------------------------------------------
+
+* Note: Any new user registered at /auth automatically receives the standard 
+  "Customer" role. Only "admin@example.com" has the "Admin" role.
+
+================================================================================
+3. HOW TO RUN THE PROJECT LOCALLY
+================================================================================
+
+PREREQUISITES:
+- Node.js (v20.x or newer recommended)
+- npm or bun
+
+STEP-BY-STEP SETUP:
+
+1. Clone or Open the Repository:
+   cd diya-project-khatri
+
+2. Install Project Dependencies:
+   npm install
+
+3. Environment Configuration (.env):
+   Create a .env file in the root folder with the following variables:
+
+   GOOGLE_GENERATIVE_AI_API_KEY="your-google-gemini-api-key"
+   JWT_SECRET="resolvely-super-secure-jwt-secret-key-2026-production"
+   JWT_EXPIRES_IN="7d"
+   APP_URL="http://localhost:8080"
+   NODE_ENV="development"
+
+4. Start the Development Server:
+   npm run dev
+
+5. Open in Web Browser:
+   http://localhost:8080
+
+================================================================================
+4. KEY FEATURES & CAPABILITIES
+================================================================================
+
+A. CUSTOMER SUPPORT PORTAL (/dashboard)
+   - ⚡ Instant Issue Templates: 4 one-click presets (Billing, Outage, Delivery, 2FA)
+   - 🔍 Live Multi-Filter Toolbar: Search by keywords, category, priority, status
+   - 📋 4-Step Support Roadmap: Visual progress guide
+   - ❓ Interactive Help Center & FAQ Accordion: Expandable self-service guides
+   - 🔒 Strict Customer Isolation: Users only see their personal tickets
+
+B. NEW TICKET INTAKE (/new)
+   - Real-time Title & Description validation
+   - Automatic attachment of customer's name & email to the ticket
+   - Instant Google Gemini 2.5 Flash classification into 7 categories:
+     (Billing, Technical, Service, Product, Delivery, Account, Other)
+   - Urgency Level assignment (Low, Medium, High, Urgent)
+   - Transparent AI Reasoning explaining the decision
+
+C. TICKET DETAILS & INTERACTIVE ACTIONS (/complaints/:id)
+   - Submitter Information badge (Customer Name & Email)
+   - ✨ Gemini AI Auto-Draft Resolution Reply (Admins click to auto-draft resolution)
+   - 💾 Dedicated "Update Status & Save Note" button with database persistence
+   - ⭐ CSAT 5-Star Customer Satisfaction Rating & Feedback widget upon resolution
+   - 📄 Export Resolution PDF / Printable Official Certificate
+   - 💬 Live Discussion Thread for direct customer-support communication
+   - 🕒 Complete Audit History Timeline logging every status transition & author
+
+D. ADMIN EXECUTIVE ANALYTICS (/admin)
+   - 📊 Gemini AI Executive Briefing Generator: 3-bullet operational diagnosis
+   - 🚨 48-Hour SLA Breach Alert Banner: Highlights overdue high-priority tickets
+   - 📈 14-Day Complaint Volume intake trendline (Recharts)
+   - 🥧 Priority Severity Mix (Pie Chart) & Category Distribution (Bar Chart)
+   - 🏢 Department Filter Tabs (Billing, Tech, Service, Delivery, etc.)
+   - 📥 Export to CSV: Download all complaints into an executive spreadsheet
+
+================================================================================
+5. TECHNOLOGY ARCHITECTURE
+================================================================================
+
+- Frontend Framework    : React 19 + TanStack Start (SSR)
+- Routing & Data        : TanStack Router + TanStack React Query
+- Styling & Design      : Tailwind CSS v4 + Radix UI Primitives + Lucide Icons
+- Charts & Visuals      : Recharts (Line, Bar, Pie charts)
+- AI Intelligence       : Google Gemini 2.5 Flash (via REST API)
+- Auth & Security       : Jose (HS256 JWT) + Role-Based Access Control (RBAC)
+- Email Notifications   : Nodemailer (Automated resolution & status change alerts)
+- Database Layer        : Prisma ORM (MySQL) with Zero-Downtime Local Mock Fallback
+
+================================================================================
+6. RECOMMENDED MANUAL TESTING SCENARIOS
+================================================================================
+
+Scenario 1: Test Customer Intake & AI Triage
+1. Go to http://localhost:8080/auth and log in as customer1@example.com (Password123!).
+2. Click "Submit New Ticket" or click the "Duplicate Billing Charge" quick template.
+3. Submit the ticket -> Notice Google Gemini classifies it as "Billing / High" with
+   a detailed rationale.
+
+Scenario 2: Verify Strict Customer Privacy
+1. Log out from Customer 1 and log in as customer2@example.com (Password123!).
+2. Go to /dashboard -> Notice Customer 2 sees 0 tickets (completely isolated).
+3. Submit a technical bug ticket for Customer 2.
+
+Scenario 3: Test Admin Intelligence & AI Resolution
+1. Log in as admin@example.com (Password123!).
+2. Access the "Admin Console" (/admin) in the sidebar -> View analytics.
+3. Click "✨ Generate AI Executive Briefing" to see Gemini's live operational summary.
+4. Click Customer 1's ticket from the master list.
+5. Click "✨ Draft with Gemini AI" -> Gemini drafts a polite resolution message.
+6. Select status "Resolved" and click "Update Status & Save Note".
+
+Scenario 4: Test Customer CSAT Feedback
+1. Log back in as customer1@example.com.
+2. Open the resolved ticket -> Notice the green "Rate Your Support Experience" card.
+3. Select 5 stars, type feedback, and click "Submit Feedback ⭐".
+
+================================================================================
+                      End of Resolvely Project Guide
+================================================================================
